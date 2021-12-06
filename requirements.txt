@@ -1,0 +1,6 @@
+# pipreqs .
+
+imgviz==1.4.1
+labelme==4.6.0
+numpy==1.21.4
+tensorflow==2.7.0
