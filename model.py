@@ -89,7 +89,7 @@ class DecoderBlock(Model):
 
 class UNet(Model):
     """
-    This class implements a U-Net architecture.
+    This class implements the U-Net architecture.
     """
     def __init__(self):
         super(Model, self).__init__()
