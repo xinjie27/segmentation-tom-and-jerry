@@ -11,13 +11,15 @@ class ConvBlock(Model):
 
     :param num_filters: number of output feature channels
     """
+
     def __init__(self, num_filters):
-        super(Model, self).__init__()
+        super(ConvBlock, self).__init__()
         self.kernel_size = 3
-        self.conv = layers.Conv2D(num_filters, self.kernel_size, padding = "same")
+        self.conv = layers.Conv2D(num_filters, self.kernel_size, padding="same")
         self.bn = layers.BatchNormalization()
         self.act = layers.Activation("relu")
-    
+
+    @tf.function
     def call(self, inputs):
         """
         Runs a forward pass.
@@ -36,15 +38,18 @@ class ConvBlock(Model):
 
 class EncoderBlock(Model):
     """
-    The encoder block consists of a ConvBlock and a 2D max pooling layer.
+    The encoder block (contracting part) consists of a ConvBlock and a 2D max
+    pooling layer.
 
     :param num_filters: number of output feature channels
     """
+
     def __init__(self, num_filters):
-        super(Model, self).__init__()
+        super(EncoderBlock, self).__init__()
         self.conv_block = ConvBlock(num_filters)
         self.pool = layers.MaxPool2D((2, 2))
-    
+
+    @tf.function
     def call(self, inputs):
         """
         Runs a forward pass.
@@ -61,17 +66,21 @@ class EncoderBlock(Model):
 
 class DecoderBlock(Model):
     """
-    The decoder block consists of a transposed convolution layer, a skip
-    connection, and a ConvBlock.
+    The decoder block (expansive part) consists of a transposed convolution
+    layer, a skip connection, and a ConvBlock.
 
     :param num_filters: number of output feature channels
     """
+
     def __init__(self, num_filters):
-        super(Model, self).__init__()
-        self.conv_t = layers.Conv2DTranspose(num_filters, (2, 2), strides=2, padding="same")
+        super(DecoderBlock, self).__init__()
+        self.conv_t = layers.Conv2DTranspose(
+            num_filters, (2, 2), strides=2, padding="same"
+        )
         self.concat = layers.Concatenate()
         self.conv_block = ConvBlock(num_filters)
-    
+
+    @tf.function
     def call(self, inputs, skip_features):
         """
         Runs a forward pass.
@@ -91,13 +100,14 @@ class UNet(Model):
     """
     This class implements the U-Net architecture.
     """
-    def __init__(self):
-        super(Model, self).__init__()
+
+    def __init__(self, cfg):
+        super(UNet, self).__init__()
 
         # Hyperparameters
-        self.lr = 1e-4
+        self.lr = cfg["learning_rate"]
+        self.batch_size = cfg["batch_size"]
         self.optimizer = tf.keras.optimizers.Adam(self.lr)
-        self.batch_size = 4
 
         # Model architecture
         self.encoder1 = EncoderBlock(64)
@@ -111,6 +121,7 @@ class UNet(Model):
         self.decoder4 = DecoderBlock(64)
         self.out_conv = layers.Conv2D(1, 1, padding="same", activation="sigmoid")
 
+    @tf.function
     def call(self, inputs):
         s1, x1 = self.encoder1(inputs)
         s2, x2 = self.encoder2(x1)
@@ -123,9 +134,9 @@ class UNet(Model):
         d2 = self.decoder2(d1, s3)
         d3 = self.decoder3(d2, s2)
         d4 = self.decoder4(d3, s1)
-        
+
         outputs = self.out_conv(d4)
         return outputs
-    
+
     def loss(self, outputs, labels):
-        pass
+        return tf.keras.metrics.binary_crossentropy(labels, outputs)

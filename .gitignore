@@ -1,4 +1,6 @@
 # Virtual environment
 venv/
+# Python cache
+__pycache__/
 # Mac configuration files
 .DS_Store
