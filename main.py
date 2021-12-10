@@ -1,4 +1,7 @@
 import argparse
+from os import read
+from sklearn.model_selection import train_test_split
+from wrapt.wrappers import transient_function_wrapper
 
 from model import UNet
 from preprocess import read_data
@@ -24,9 +27,17 @@ def get_config():
         "-i",
         "--input-dir",
         type=str,
-        nargs=2,
         required=True,
         help="Input directory",
+        dest="input_dir",
+    )
+    parser.add_argument(
+        "-o",
+        "--output-dir",
+        type=str,
+        default="outputs/",
+        help="Output directory",
+        dest="output_dir",
     )
     parser.add_argument(
         "-e", "--epochs", type=int, default=10, help="Number of epochs", dest="n_epochs"
@@ -59,9 +70,31 @@ def get_config():
 
 def main(cfg):
     model = UNet(cfg)
-    
+    input_dir = cfg["input_dir"]
+
     if cfg["mode"] == "train":
+        img_dir = input_dir + "images"
+        mask_dir = input_dir + "masks"
+
+        inputs, masks = read_data(img_dir, mask_dir)
+        train_inputs, val_inputs, train_masks, val_masks = train_test_split(
+            inputs, masks, test_size=0.1
+        )
         n_epochs = cfg["n_epochs"]
+
+        for i in range(n_epochs):
+            print("Epoch ", i + 1)
+            train(model, train_inputs, train_masks)
+
+        # Save the model weights
+        model_path = cfg["output_dir"] + "model_weights"
+        model.save_weights(model_path)
+        print("Model successfully saved!")
+
+    if cfg["mode"] == "test":
+        pass
+
+    else:
         pass
 
 

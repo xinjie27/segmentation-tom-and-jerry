@@ -7,8 +7,8 @@ def train(model, train_inputs, train_masks):
     Trains the model for one epoch.
 
     :param model: a tf.keras.Model instance
-    :param train_inputs: 4-D Tensor of shape (num_examples, height, width, num_channels)
-    :param train_masks: 4-D Tensor of shape (num_examples, height, width, 1)
+    :param train_inputs: 4-D Tensor of shape (num_inputs, height, width, num_channels)
+    :param train_masks: 4-D Tensor of shape (num_inputs, height, width, 1)
     :return: None
     """
     num_inputs = train_inputs.shape[0]
