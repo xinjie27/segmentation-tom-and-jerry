@@ -1,6 +1,3 @@
-import os
-
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 import tensorflow as tf
 from tensorflow.keras import Model, layers
 
@@ -110,10 +107,11 @@ class UNet(Model):
         # Hyperparameters
         self.lr = cfg["learning_rate"]
         self.batch_size = cfg["batch_size"]
+        self.class_weight = cfg["class_weight"]
         self.optimizer = tf.keras.optimizers.Adam(self.lr)
 
         # Model architecture
-        self.input_layer = layers.InputLayer(input_shape=(128, 128, 3))
+        self.input_layer = layers.InputLayer(input_shape=(256, 192, 3))
         self.encoder1 = EncoderBlock(64)
         self.encoder2 = EncoderBlock(128)
         self.encoder3 = EncoderBlock(256)
@@ -144,6 +142,12 @@ class UNet(Model):
         return probs
 
     def loss(self, probs, masks):
-        loss = tf.keras.losses.SparseCategoricalCrossentropy
-        return loss(masks, probs)
-        # return tf.keras.metrics.binary_crossentropy(masks, probs)
+        """
+        Computes the weighted binary cross-entropy loss.
+        """
+        masks = tf.cast(masks, tf.float32)
+        log_loss = -(
+            masks * tf.math.log(probs) * self.class_weight
+            + (1 - masks) * tf.math.log(1 - probs)
+        )
+        return tf.math.reduce_sum(log_loss)

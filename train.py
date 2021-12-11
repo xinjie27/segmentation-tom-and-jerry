@@ -36,8 +36,8 @@ def _augment(images, masks):
     Applies image augmentation on a pair of image batch and mask batch, including:
     1. Random flip horizontally
     2. Random flip vertically
-    3. Random brightness
-    4. Random hue
+    3. Random brightness (removed)
+    4. Random hue (removed)
 
     :param images: 4-D Tensor of shape (height, width, num_channels, batch_size)
     :param masks: 4-D Tensor of shape (height, width, 1, batch_size)
@@ -54,7 +54,7 @@ def _augment(images, masks):
     images = maybe_flipped[:, :, :, :-1]
     masks = tf.cast(maybe_flipped[:, :, :, -1:], tf.int32)
 
-    images = tf.image.random_brightness(images, max_delta=0.2)
-    images = tf.image.random_hue(images, max_delta=0.1)
+    # images = tf.image.random_brightness(images, max_delta=0.2)
+    # images = tf.image.random_hue(images, max_delta=0.1)
 
     return images, masks

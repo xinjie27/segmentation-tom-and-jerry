@@ -1,12 +1,15 @@
 import argparse
-from os import read
 from sklearn.model_selection import train_test_split
-from wrapt.wrappers import transient_function_wrapper
+import tensorflow as tf
+import random
+import os
+
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 from model import UNet
-from preprocess import read_data
+from utils import read_data, visualize
 from train import train
-from test import test
+from test import test, predict
 
 
 def get_config():
@@ -21,7 +24,7 @@ def get_config():
         "-m",
         "--mode",
         type=str,
-        choices=["train", "test", "predict"],
+        choices=["train", "test"],
         required=True,
     )
     parser.add_argument(
@@ -41,13 +44,13 @@ def get_config():
         dest="output_dir",
     )
     parser.add_argument(
-        "-e", "--epochs", type=int, default=10, help="Number of epochs", dest="n_epochs"
+        "-e", "--epochs", type=int, default=5, help="Number of epochs", dest="n_epochs"
     )
     parser.add_argument(
         "-b",
         "--batch-size",
         type=int,
-        default=4,
+        default=2,
         help="Batch size",
         dest="batch_size",
     )
@@ -55,9 +58,12 @@ def get_config():
         "-l",
         "--learning-rate",
         type=float,
-        default=1e-2,
+        default=3e-5,
         help="Learning rate",
         dest="learning_rate",
+    )
+    parser.add_argument(
+        "--class-weight", type=int, default=5, help="Class weight", dest="class_weight"
     )
 
     args = parser.parse_args()
@@ -72,11 +78,11 @@ def get_config():
 def main(cfg):
     model = UNet(cfg)
     input_dir = cfg["input_dir"]
+    img_dir = input_dir + "/images"
+    mask_dir = input_dir + "/masks"
+    model_path = cfg["output_dir"] + "model_weights"
 
     if cfg["mode"] == "train":
-        img_dir = input_dir + "/images"
-        mask_dir = input_dir + "/masks"
-
         inputs, masks = read_data(img_dir, mask_dir)
         train_inputs, val_inputs, train_masks, val_masks = train_test_split(
             inputs, masks, test_size=0.2
@@ -91,16 +97,24 @@ def main(cfg):
             print("Mean Intersection-Over-Union: {}".format(mean_IoU))
 
         # Save the model weights
-        model_path = cfg["output_dir"] + "model_weights"
-        model.save_weights(model_path)
+        tf.keras.models.save_model(model, model_path)
         print("Model successfully saved!")
 
-    if cfg["mode"] == "test":
-        import tensorflow_datasets as tfds
-        pass
+    else:  # mode == test
+        test_inputs, test_masks = read_data(img_dir, mask_dir)
+        # Load the model weights
+        model = tf.keras.models.load_model(model_path)
+        print("Model successfully loaded!")
 
-    else:
-        pass
+        # Make predictions
+        mean_IoU = test(model, test_inputs, test_masks)
+        print("Test set IoU score: {}".format(mean_IoU))
+        predictions = predict(model, test_inputs)
+
+        # Visualize model performance
+        vis_idx = random.randint(0, len(test_inputs) - 1)
+        vis_list = [test_inputs[vis_idx], test_masks[vis_idx], predictions[vis_idx]]
+        visualize(vis_list)
 
 
 if __name__ == "__main__":

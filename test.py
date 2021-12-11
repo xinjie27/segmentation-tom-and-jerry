@@ -1,4 +1,3 @@
-from re import L
 import numpy as np
 import tensorflow as tf
 
@@ -21,8 +20,7 @@ def test(model, test_inputs, test_masks):
     for i in range(0, num_inputs, model.batch_size):
         batch_inputs = test_inputs[i : i + model.batch_size, :, :, :]
         batch_masks = test_masks[i : i + model.batch_size, :, :, :]
-        probs = model(batch_inputs)
-        predictions = tf.where(probs < 0.5, 0, 1)
+        predictions = predict(model, batch_inputs)
 
         IoU.update_state(batch_masks, predictions)
         acc_IoU += IoU.result().numpy()
@@ -34,34 +32,14 @@ def test(model, test_inputs, test_masks):
     return mean_IoU
 
 
-def _DSC(y_pred, y_true, smooth=1e-4):
+def predict(model, inputs):
     """
-    Computes the Dice similarity coefficient (F1 score).
+    Makes predictions based on the model.
 
-    :param y_pred:
-    :param y_true:
-    :param smooth: a smoothing factor, 1e-4 by default
-    :return: a float that ranges from 0 to 1
+    :param model: a tf.keras.Model that has been trained
+    :param inputs: 4-D Tensor of shape (num_examples, height, width, num_channels)
+    :return: predictions, 4-D Tensor of shape (num_examples, height, width, 1)
     """
-    y_pred_f = tf.reshape(y_pred, [-1])
-    y_true_f = tf.reshape(y_true, [-1])
-
-    intersection = tf.math.reduce_sum(y_pred_f * y_true_f)
-    dice_coeff = (2.0 * intersection + smooth) / (
-        tf.math.reduce_sum(y_pred_f) + tf.math.reduce_sum(y_true_f) + smooth
-    )
-
-    return dice_coeff
-
-
-def _IoU(y_pred, y_true):
-    """
-    Computes the intersection over union (IoU).
-    """
-    y_pred_f = tf.reshape(y_pred, [-1])
-    y_true_f = tf.reshape(y_true, [-1])
-
-    intersection = tf.reduce_sum(y_pred_f * y_true_f)
-    union = tf.reduce_sum(y_pred_f) + tf.reduce_sum(y_true_f) - intersection
-
-    return intersection / union
+    probs = model(inputs)
+    predictions = tf.where(probs < 0.5, 0, 1)
+    return predictions
