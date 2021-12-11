@@ -45,15 +45,16 @@ def _augment(images, masks):
         images - a batch of randomly augmented images
         masks - a batch of randomly augmented masks
     """
-    concat_batch = tf.concat([images, masks], axis=2)
+    masks = tf.cast(masks, tf.float32)
+    concat_batch = tf.concat([images, masks], axis=-1)
 
     maybe_flipped = tf.image.random_flip_left_right(concat_batch)
     maybe_flipped = tf.image.random_flip_up_down(maybe_flipped)
 
-    images = maybe_flipped[:, :, :-1, :]
-    masks = maybe_flipped[:, :, -1:, :]
+    images = maybe_flipped[:, :, :, :-1]
+    masks = tf.cast(maybe_flipped[:, :, :, -1:], tf.int32)
 
     images = tf.image.random_brightness(images, max_delta=0.2)
-    images = tf.image.random_hue(images, max_delta=0.2)
+    images = tf.image.random_hue(images, max_delta=0.1)
 
     return images, masks

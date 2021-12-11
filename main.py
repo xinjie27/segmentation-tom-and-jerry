@@ -6,6 +6,7 @@ from wrapt.wrappers import transient_function_wrapper
 from model import UNet
 from preprocess import read_data
 from train import train
+from test import test
 
 
 def get_config():
@@ -73,18 +74,21 @@ def main(cfg):
     input_dir = cfg["input_dir"]
 
     if cfg["mode"] == "train":
-        img_dir = input_dir + "images"
-        mask_dir = input_dir + "masks"
+        img_dir = input_dir + "/images"
+        mask_dir = input_dir + "/masks"
 
         inputs, masks = read_data(img_dir, mask_dir)
         train_inputs, val_inputs, train_masks, val_masks = train_test_split(
-            inputs, masks, test_size=0.1
+            inputs, masks, test_size=0.2
         )
         n_epochs = cfg["n_epochs"]
 
+        print("Training U-Net...")
         for i in range(n_epochs):
-            print("Epoch ", i + 1)
+            print("Epoch:", i + 1)
             train(model, train_inputs, train_masks)
+            mean_IoU = test(model, val_inputs, val_masks)
+            print("Mean Intersection-Over-Union: {}".format(mean_IoU))
 
         # Save the model weights
         model_path = cfg["output_dir"] + "model_weights"
@@ -92,6 +96,7 @@ def main(cfg):
         print("Model successfully saved!")
 
     if cfg["mode"] == "test":
+        import tensorflow_datasets as tfds
         pass
 
     else:

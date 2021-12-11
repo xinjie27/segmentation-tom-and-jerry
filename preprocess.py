@@ -16,12 +16,19 @@ def read_data(img_dir, mask_dir):
     img_list = glob.glob(img_dir + "/*.jpg")
     mask_list = glob.glob(mask_dir + "/*.npy")
 
-    images = np.array([np.array(Image.open(fname)) for fname in img_list]).astype(
-        np.float32
+    images = np.array(
+        [np.array(Image.open(fname).resize([128, 128])) for fname in img_list]
+    ).astype(np.float32)
+    masks = np.array(
+        [
+            np.array(Image.fromarray(np.load(fname)).resize([128, 128]))
+            for fname in mask_list
+        ]
     )
-    masks = np.array([np.load(fname) for fname in mask_list])
+
     masks = np.expand_dims(masks, axis=-1)
+
     # Normalize the pixel values
     images /= 255.0
 
-    return images, masks
+    return images[:40], masks[:40]

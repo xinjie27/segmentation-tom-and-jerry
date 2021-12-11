@@ -1,4 +1,6 @@
-import numpy as np
+import os
+
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 import tensorflow as tf
 from tensorflow.keras import Model, layers
 
@@ -15,7 +17,8 @@ class ConvBlock(Model):
     def __init__(self, num_filters):
         super(ConvBlock, self).__init__()
         self.kernel_size = 3
-        self.conv = layers.Conv2D(num_filters, self.kernel_size, padding="same")
+        self.conv1 = layers.Conv2D(num_filters, self.kernel_size, padding="same")
+        self.conv2 = layers.Conv2D(num_filters, self.kernel_size, padding="same")
         self.bn = layers.BatchNormalization()
         self.act = layers.Activation("relu")
 
@@ -27,10 +30,10 @@ class ConvBlock(Model):
         :param inputs: input batch of feature maps
         :return: output feature maps
         """
-        conv1_out = self.conv(inputs)
+        conv1_out = self.conv1(inputs)
         bn1_out = self.bn(conv1_out)
         act1_out = self.act(bn1_out)
-        conv2_out = self.conv(act1_out)
+        conv2_out = self.conv2(act1_out)
         bn2_out = self.bn(conv2_out)
         act2_out = self.act(bn2_out)
         return act2_out
@@ -74,9 +77,7 @@ class DecoderBlock(Model):
 
     def __init__(self, num_filters):
         super(DecoderBlock, self).__init__()
-        self.conv_t = layers.Conv2DTranspose(
-            num_filters, (2, 2), strides=2, padding="same"
-        )
+        self.conv_t = layers.Conv2DTranspose(num_filters, 2, strides=2, padding="same")
         self.concat = layers.Concatenate()
         self.conv_block = ConvBlock(num_filters)
 
@@ -90,8 +91,10 @@ class DecoderBlock(Model):
             fetched through the skip connection
         :return: output feature maps
         """
+        ("here at call start")
         conv_t_out = self.conv_t(inputs)
-        concat_out = self.concat([conv_t_out, skip_features])
+        ("here at convT end")
+        concat_out = self.concat([skip_features, conv_t_out])
         conv_out = self.conv_block(concat_out)
         return conv_out
 
@@ -110,6 +113,7 @@ class UNet(Model):
         self.optimizer = tf.keras.optimizers.Adam(self.lr)
 
         # Model architecture
+        self.input_layer = layers.InputLayer(input_shape=(128, 128, 3))
         self.encoder1 = EncoderBlock(64)
         self.encoder2 = EncoderBlock(128)
         self.encoder3 = EncoderBlock(256)
@@ -123,7 +127,8 @@ class UNet(Model):
 
     @tf.function
     def call(self, inputs):
-        s1, x1 = self.encoder1(inputs)
+        x = self.input_layer(inputs)
+        s1, x1 = self.encoder1(x)
         s2, x2 = self.encoder2(x1)
         s3, x3 = self.encoder3(x2)
         s4, x4 = self.encoder4(x3)
@@ -135,8 +140,10 @@ class UNet(Model):
         d3 = self.decoder3(d2, s2)
         d4 = self.decoder4(d3, s1)
 
-        outputs = self.out_conv(d4)
-        return outputs
+        probs = self.out_conv(d4)
+        return probs
 
-    def loss(self, outputs, labels):
-        return tf.keras.metrics.binary_crossentropy(labels, outputs)
+    def loss(self, probs, masks):
+        loss = tf.keras.losses.SparseCategoricalCrossentropy
+        return loss(masks, probs)
+        # return tf.keras.metrics.binary_crossentropy(masks, probs)
