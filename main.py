@@ -4,12 +4,12 @@ import tensorflow as tf
 import random
 import os
 
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
-
 from model import UNet
 from utils import read_data, visualize
 from train import train
 from test import test, predict
+
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 
 def get_config():
