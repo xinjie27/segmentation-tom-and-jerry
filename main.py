@@ -97,13 +97,13 @@ def main(cfg):
             print("Mean Intersection-Over-Union: {}".format(mean_IoU))
 
         # Save the model weights
-        tf.keras.models.save_model(model, model_path)
+        model.save_weights(model_path)
         print("Model successfully saved!")
 
     else:  # mode == test
         test_inputs, test_masks = read_data(img_dir, mask_dir)
         # Load the model weights
-        model = tf.keras.models.load_model(model_path)
+        model.load_weights(model_path).expect_partial()
         print("Model successfully loaded!")
 
         # Make predictions

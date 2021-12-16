@@ -38,7 +38,7 @@ class ConvBlock(Model):
 
 class EncoderBlock(Model):
     """
-    The encoder block (contracting part) consists of a ConvBlock and a 2D max
+    The encoder block (contracting path) consists of a ConvBlock and a 2D max
     pooling layer.
 
     :param num_filters: number of output feature channels
@@ -66,7 +66,7 @@ class EncoderBlock(Model):
 
 class DecoderBlock(Model):
     """
-    The decoder block (expansive part) consists of a transposed convolution
+    The decoder block (expanding path) consists of a transposed convolution
     layer, a skip connection, and a ConvBlock.
 
     :param num_filters: number of output feature channels
